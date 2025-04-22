@@ -25,6 +25,10 @@ const BaseRequestParamsSchema = z
       z
         .object({
           /**
+           * should be a simple data discriminator for the request
+           */
+          discriminator: z.optional(z.string()),
+          /**
            * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
            */
           progressToken: z.optional(ProgressTokenSchema),
@@ -310,6 +314,10 @@ export const ServerCapabilitiesSchema = z
            * Whether this server supports issuing notifications for changes to the tool list.
            */
           listChanged: z.optional(z.boolean()),
+          /**
+           * Whether this server requires the _meta parameter to be provided for requests.
+           */
+          supportsDiscrimination: z.optional(z.boolean()),
         })
         .passthrough(),
     ),
