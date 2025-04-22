@@ -24,7 +24,7 @@ describe("tool discrimination", () => {
     }));
 
     // Set up the discriminator
-    mcpServer.setToolDiscriminator((request) => async ({ name, tool: _tool }) => {
+    mcpServer.setToolDiscriminator((request) => async ({ name }) => {
       const discriminator = request.params?._meta?.discriminator;
       console.log("discriminator", discriminator, "name", name);
       if (!discriminator) {
@@ -112,7 +112,7 @@ describe("tool discrimination", () => {
       );
 
       // Set up the discriminator
-      mcpServer.setToolDiscriminator((request) => async ({ name, tool: _tool }) => {
+      mcpServer.setToolDiscriminator((request) => async ({ name }) => {
         // Require discriminator for all tool calls
         if (!request.params?._meta?.discriminator) {
           return false;
