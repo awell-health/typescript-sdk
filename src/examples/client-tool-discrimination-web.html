@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cerberus Access Control</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-yellow-50 min-h-screen">
+  <!-- Google OAuth Login Box -->
+  <div id="login-box" class="flex flex-col items-center justify-center min-h-screen bg-yellow-50" style="display:none;">
+    <div class="bg-white p-8 rounded-xl shadow max-w-sm w-full">
+      <h2 class="text-2xl font-bold mb-4 text-center">Sign in with Google</h2>
+      <button id="google-login-btn" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded font-semibold hover:bg-blue-700 transition">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M21.805 10.023h-9.765v3.955h5.602c-.24 1.24-1.413 3.635-5.602 3.635-3.373 0-6.124-2.797-6.124-6.255s2.751-6.255 6.124-6.255c1.922 0 3.212.818 3.953 1.523l2.708-2.632c-1.715-1.59-3.926-2.57-6.661-2.57-5.523 0-10 4.477-10 10s4.477 10 10 10c5.747 0 9.546-4.03 9.546-9.705 0-.65-.07-1.14-.155-1.595z"/></svg>
+        Sign in with Google
+      </button>
+    </div>
+  </div>
+  <!-- Main App Root -->
+  <div id="app-root" style="display:none;">
+    <div class="container mx-auto max-w-6xl px-4 py-8">
+      <!-- Header -->
+      <div class="text-center mb-10">
+        <div class="flex justify-center mb-2">
+          <img src="https://static.thenounproject.com/png/1890707-200.png" alt="Cerberus Logo" class="w-16 h-16 mx-auto" />
+        </div>
+        <h1 class="text-4xl font-extrabold text-orange-700 mb-2">Cerberus Access Control</h1>
+        <p class="text-gray-700 text-lg max-w-2xl mx-auto">A demonstration of role-based access control for agent systems. Select your role and attempt to access different tools to see the policy in action.</p>
+      </div>
+      <div class="grid md:grid-cols-2 gap-8">
+        <!-- Controls Sidebar -->
+        <div>
+          <div class="bg-white rounded-xl shadow p-6 mb-6">
+            <h2 class="font-bold text-lg mb-2 flex items-center gap-2"><span class="inline-block bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Student Access Level</span></h2>
+            <div class="mb-4">
+              <label for="role" class="block font-medium mb-1">Select Your Hogwarts Role</label>
+              <select id="role" class="w-full border border-gray-300 rounded px-3 py-2" onchange="fetchTools()">
+                <option value="student">Student</option>
+                <option value="prefect">Prefect</option>
+                <option value="teacher">Teacher</option>
+              </select>
+              <button id="role-btn" class="mt-2 px-3 py-1 bg-yellow-200 text-yellow-900 rounded font-semibold">★ Student</button>
+              <p class="text-gray-500 mt-1 text-sm" id="role-desc">As a student, you can only access standard textbooks.</p>
+            </div>
+            <div class="mb-4">
+              <label for="context" class="block font-medium mb-1">Request Context (Optional)</label>
+              <textarea id="context" class="w-full border border-gray-300 rounded px-3 py-2" rows="2" placeholder="Add additional context for your request..."></textarea>
+              <p class="text-gray-400 text-xs mt-1">This will be included in the results when access is granted.</p>
+            </div>
+            <div class="mt-6">
+              <h3 class="font-bold mb-1">Access Policy</h3>
+              <div id="policy" class="bg-gray-50 border border-gray-200 rounded p-3 text-sm text-gray-600">Current permissions for role: <span id="policy-role">Student</span></div>
+            </div>
+          </div>
+          <div class="loading text-center text-yellow-700 font-semibold mb-4" id="loading" style="display:none;">Consulting the librarian...</div>
+          <div class="error text-center text-red-600 font-semibold mb-4" id="error"></div>
+        </div>
+        <!-- Tool Cards -->
+        <div id="tools"></div>
+      </div>
+      <div class="result mt-8 text-center text-lg font-semibold text-green-700" id="result"></div>
+    </div>
+    <!-- ELI15 Explanation Section -->
+    <div class="max-w-3xl mx-auto mt-16 mb-8 bg-white rounded-xl shadow p-8 border border-gray-200">
+      <h2 class="text-xl font-bold mb-2">How Cerberus Access Control Works (ELI15)</h2>
+      <p class="mb-4 text-gray-700">
+        Imagine you’re at a magical library with different rooms. Your student ID (role) decides which rooms you can enter and which books you can borrow.
+      </p>
+      <ul class="list-disc ml-6 text-gray-700 mb-4">
+        <li><b>You choose your role</b> (Student, Prefect, Teacher).</li>
+        <li><b>The system checks</b> what you’re allowed to see and do.</li>
+        <li><b>You request a book</b>—the system asks the “librarian” (server) if you’re allowed.</li>
+        <li><b>If yes</b>, you get the book. <b>If no</b>, you get a friendly “no entry” message.</li>
+      </ul>
+      <div class="bg-gray-50 border border-gray-100 rounded p-4 text-sm text-gray-600">
+        <b>Key Idea:</b> Your role controls what you can see and do, and the server always double-checks before letting you in!
+      </div>
+    </div>
+    <footer class="text-center text-gray-400 text-sm mt-8 mb-4">
+      Cerberus Access Control Demonstration
+    </footer>
+  </div>
+  <!-- Use local Stytch SDK fallback -->
+  <script src="./stytch.js"></script>
+  <script>
+    const stytchPublicToken = "public-token-test-80d2db3f-a6bf-4703-ba7c-69dbaac8c6f6";
+    let stytchClient;
+    function showLogin() {
+      document.getElementById('login-box').style.display = 'flex';
+      document.getElementById('app-root').style.display = 'none';
+    }
+    function showApp() {
+      document.getElementById('login-box').style.display = 'none';
+      document.getElementById('app-root').style.display = 'block';
+    }
+    function waitForStytch(cb) {
+      if (typeof StytchClient !== 'undefined') {
+        cb();
+      } else {
+        setTimeout(() => waitForStytch(cb), 50);
+      }
+    }
+    window.onload = function() {
+      waitForStytch(function() {
+        stytchClient = new StytchClient(stytchPublicToken);
+        // Check if already authenticated
+        stytchClient.session.get().then(session => {
+          if (session && session.status === 'active') {
+            showApp();
+          } else {
+            showLogin();
+          }
+        });
+        // Google OAuth button
+        document.getElementById('google-login-btn').onclick = function() {
+          stytchClient.oauth.google.start({ login_redirect_url: window.location.href });
+        };
+        // Handle redirect back from Google OAuth
+        stytchClient.oauth.authenticateFromUrl()
+          .then(session => {
+            if (session && session.status === 'active') {
+              showApp();
+            }
+          })
+          .catch(() => {});
+      });
+    };
+  </script>
+  <script>
+    const mcpUrl = "http://localhost:4000/mcp";
+    const loadingDiv = document.getElementById('loading');
+    const errorDiv = document.getElementById('error');
+    const resultDiv = document.getElementById('result');
+    const toolsDiv = document.getElementById('tools');
+    const roleSelect = document.getElementById('role');
+    const roleBtn = document.getElementById('role-btn');
+    const roleDesc = document.getElementById('role-desc');
+    const contextInput = document.getElementById('context');
+    const policyRole = document.getElementById('policy-role');
+    const policyDiv = document.getElementById('policy');
+
+    const roleDescriptions = {
+      student: {
+        btn: '★ Student',
+        desc: 'As a student, you can only access standard textbooks.',
+        policy: 'Current permissions for role: Student',
+      },
+      prefect: {
+        btn: '✦ Prefect',
+        desc: 'As a prefect, you can access standard and restricted books.',
+        policy: 'Current permissions for role: Prefect',
+      },
+      teacher: {
+        btn: '✪ Teacher',
+        desc: 'As a teacher, you can access all books, including cursed scrolls.',
+        policy: 'Current permissions for role: Teacher',
+      },
+    };
+
+    function updateRoleUI(role) {
+      roleBtn.textContent = roleDescriptions[role].btn;
+      roleDesc.textContent = roleDescriptions[role].desc;
+      policyRole.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+      policyDiv.textContent = roleDescriptions[role].policy;
+    }
+
+    async function fetchTools() {
+      const role = roleSelect.value;
+      updateRoleUI(role);
+      resultDiv.textContent = '';
+      errorDiv.textContent = '';
+      toolsDiv.innerHTML = '';
+      loadingDiv.style.display = 'block';
+      try {
+        const params = { _meta: { discriminator: role } };
+        const listResp = await fetch(mcpUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json, text/event-stream'
+          },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: Date.now(),
+            method: "tools/list",
+            params
+          })
+        });
+        const listData = await listResp.json();
+        loadingDiv.style.display = 'none';
+        if (listData.error) {
+          errorDiv.textContent = listData.error.message || 'Error fetching books.';
+          return;
+        }
+        const tools = listData.result?.tools || [];
+        if (tools.length) {
+          tools.forEach(tool => {
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-xl shadow p-6 mb-6 flex flex-col';
+            // Icon based on tool
+            let icon = '';
+            if (tool.name === 'standard_book') {
+              icon = `<svg class="w-8 h-8 text-yellow-500 mb-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2" /></svg>`;
+            } else if (tool.name === 'restricted_section') {
+              icon = `<svg class="w-8 h-8 text-red-500 mb-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>`;
+            } else if (tool.name === 'cursed_scroll') {
+              icon = `<svg class="w-8 h-8 text-purple-500 mb-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>`;
+            }
+            card.innerHTML = `
+              <div class="flex items-center gap-2 mb-2">${icon}<span class="text-xl font-bold">${tool.name.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span></div>
+              <p class="text-gray-600 mb-4">${tool.description || ''}</p>
+              <button class="tool-btn px-4 py-2 bg-orange-100 text-orange-800 rounded font-semibold hover:bg-orange-200 transition">Request Access</button>
+            `;
+            const btn = card.querySelector('.tool-btn');
+            btn.onclick = async () => {
+              resultDiv.textContent = '';
+              errorDiv.textContent = '';
+              btn.disabled = true;
+              loadingDiv.style.display = 'block';
+              try {
+                const params = {
+                  name: tool.name,
+                  arguments: { context: contextInput.value },
+                  _meta: { discriminator: role }
+                };
+                const callResp = await fetch(mcpUrl, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json, text/event-stream'
+                  },
+                  body: JSON.stringify({
+                    jsonrpc: "2.0",
+                    id: Date.now(),
+                    method: "tools/call",
+                    params
+                  })
+                });
+                const callData = await callResp.json();
+                loadingDiv.style.display = 'none';
+                btn.disabled = false;
+                if (callData.error) {
+                  errorDiv.textContent = callData.error.message || 'Error borrowing book.';
+                  resultDiv.textContent = '';
+                } else {
+                  // Try to extract a nice message from result.content[0].text
+                  let message = '';
+                  if (callData.result && callData.result.content && callData.result.content[0]?.text) {
+                    message = callData.result.content[0].text;
+                  } else if (callData.result && callData.result[0]?.text) {
+                    message = callData.result[0].text;
+                  } else {
+                    message = JSON.stringify(callData.result);
+                  }
+                  // Style the result
+                  resultDiv.innerHTML = `
+                    <div class="inline-flex items-center gap-2 px-4 py-3 rounded-lg bg-green-100 text-green-800 text-lg font-semibold shadow">
+                      <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                      <span>${message}</span>
+                    </div>
+                  `;
+                }
+              } catch (err) {
+                loadingDiv.style.display = 'none';
+                btn.disabled = false;
+                errorDiv.textContent = 'Error borrowing book.';
+              }
+            };
+            toolsDiv.appendChild(card);
+          });
+        } else {
+          toolsDiv.textContent = 'No books available for your role.';
+        }
+      } catch (err) {
+        loadingDiv.style.display = 'none';
+        errorDiv.textContent = 'Error fetching books.';
+      }
+    }
+
+    // Initial load
+    updateRoleUI(roleSelect.value);
+    fetchTools();
+  </script>
+</body>
+</html>
